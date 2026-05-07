@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { adminClient } from "@/lib/supabase/admin";
+import { appSchema } from "@/lib/applications/validators";
+export async function POST(req: Request) { try { const body = appSchema.parse(await req.json()); const s = adminClient(); const { data: bisa_id, error: idErr } = await s.rpc("generate_next_bisa_id"); if (idErr) throw idErr; const { data, error } = await s.from("membership_applications").insert([{ ...body, bisa_id, application_status: "Submitted", payment_status: "Unpaid", declaration_accepted_at: new Date().toISOString() }]).select("id").single(); if (error) throw error; await s.from("application_audit_logs").insert([{ application_id: data.id, action: "application_submitted", description: "Application submitted" }]); return NextResponse.json({ bisa_id }); } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 400 }); } }
